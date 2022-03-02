@@ -19,7 +19,7 @@ import           Monad.Distr.Relational.Theorems (bindDistEq)
 import           Data.Dist 
 import           SGD.SGD 
 
-
+-- TODO: lipschiz
 {-@ assume relationalupdatep :: d:Dist Double -> z1:DataPoint -> α1:StepSize -> f1:LossFunction 
                              -> z2:DataPoint -> {α2:StepSize|α1 = α2} -> {f2:LossFunction|f1 = f2} 
                              -> ws1:Weight -> ws2:Weight -> 
@@ -43,6 +43,7 @@ sum SSEmp       = 0
 sum (SS a as) = a + sum as
 
 {-@ reflect estab @-}
+-- TODO: lipschiz
 {-@ estab :: DataSet -> StepSizes -> {v:Double | 0.0 <= v} @-}
 estab :: DataSet -> StepSizes -> Double
 estab zs as = 2.0 / (lend zs) * sum as
@@ -66,6 +67,11 @@ estabconsR zs x xs
   === 2.0 * x * (one / lend zs) + estab zs xs 
   *** QED 
 
+{-@ assume choiceBind :: p:Prob -> e1:Distr a -> e2:Distr a -> f:(a -> Distr b) 
+                      -> {choice p (bind e1 f) (bind e2 f) = bind (choice p e1 e2) f} @-}
+choiceBind :: Prob -> Distr a -> Distr a -> (a -> Distr b) -> ()
+choiceBind _ _ _ _ = ()
+
 {-@ ple thm @-}
 {-@ thm :: d:Dist Double -> zs1:DataSet -> ws1:Weight -> α1:StepSizes -> f1:LossFunction -> 
            zs2:{DataSet | lend zs1 == lend zs2 && tail zs1 = tail zs2} -> 
@@ -84,10 +90,21 @@ thm d zs1 ws1 α1@SSEmp f1 zs2 ws2 α2@SSEmp f2 =
 thm d zs1 ws1 as1@(SS α1 a1) f1 zs2 ws2 as2@(SS α2 a2) f2 =
   dist (kant d) (sgd zs1 ws1 as1 f1) (sgd zs2 ws2 as2 f2)
     === dist (kant d)
+            (bind (unif zs1) (sgdRecUpd zs1 ws1 α1 a1 f1))
+            (bind (unif zs2) (sgdRecUpd zs2 ws2 α2 a2 f2))
+    === dist (kant d)
+            (bind (choice (one / lend zs1) uhead1 utail1) sgdRec1)
+            (bind (choice (one / lend zs2) uhead2 utail2) sgdRec2)
+        ?   choiceBind (one / lend zs1) uhead1 utail1 sgdRec1
+    === dist (kant d)
+            (choice (one / lend zs1) (bind uhead1 sgdRec1) (bind utail1 sgdRec1))
+            (bind (choice (one / lend zs2) uhead2 utail2) sgdRec2)
+        ?   choiceBind (one / lend zs2) uhead2 utail2 sgdRec2
+    === dist (kant d)
           (choice (one / lend zs1) (bind uhead1 sgdRec1) (bind utail1 sgdRec1))
           (choice (one / lend zs2) (bind uhead2 sgdRec2) (bind utail2 sgdRec2))
-    ?   choiceDist d (one / lend zs1) (bind uhead1 sgdRec1) (bind utail1 sgdRec1)
-                   (one / lend zs2) (bind uhead2 sgdRec2) (bind utail2 sgdRec2)
+        ?   choiceDist d (one / lend zs1) (bind uhead1 sgdRec1) (bind utail1 sgdRec1)
+                    (one / lend zs2) (bind uhead2 sgdRec2) (bind utail2 sgdRec2)
 
     =<= (one / lend zs1) * (dist (kant d) (bind uhead1 sgdRec1) (bind uhead2 sgdRec2)) 
         + (1 - (one / lend zs1)) * (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2))

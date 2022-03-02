@@ -1,10 +1,12 @@
 {-@ LIQUID "--reflection"     @-}
+{-@ LIQUID "--ple"            @-}
 
 module SGD.SGD where 
 
 import           Prelude  hiding ( head, tail, sum)
 import           Monad.Distr 
 import           Data.Dist 
+import           Data.List 
 import           Data.Derivative
 
 {-@ type StepSize = {v:Double | 0.0 <= v } @-}
@@ -26,14 +28,10 @@ type DataDistr = Distr DataPoint
        -> Distr Weight / [ sslen ss, 0 ] @-}
 sgd :: DataSet -> Weight -> StepSizes -> LossFunction -> Distr Weight
 sgd _  w0 SSEmp    _ = ppure w0
-sgd zs w0 (SS α a) f = 
-  choice (one / lend zs)
-         (bind uhead (sgdRecUpd zs w0 α a f))
-         (bind utail (sgdRecUpd zs w0 α a f)) 
+sgd zs w0 (SS α a) f = bind (unif zs) (sgdRecUpd zs w0 α a f)
  where
   uhead = ppure (head zs)
   utail = unif (tail zs)
-
 
 {-@ reflect sgdRecUpd @-}
 {-@ sgdRecUpd :: zs:{DataSet | 1 < len zs && 1 < lend zs } -> Weight -> StepSize -> ss:StepSizes -> LossFunction 
@@ -59,19 +57,15 @@ update z α f w = w - α * (grad (f z) w)
 -------------------------------------------------------------------------------
 
 
-{-@ measure lend @-}
+{-@ reflect lend @-}
 {-@ lend :: xs:[a] -> {v:Double| 0.0 <= v } @-}
 lend :: [a] -> Double
-lend []       = 0
-lend (_ : xs) = 1 + lend xs
-
+lend xs = fromIntegral (len xs)
 
 {-@ reflect one @-}
 {-@ one :: {v:Double| v = 1.0 } @-}
 one :: Double
 one = 1
-
-
 
 {-@ reflect head @-}
 {-@ head :: {xs:[a] | len xs > 0 } -> a @-}
@@ -79,7 +73,8 @@ head :: [a] -> a
 head (z : _) = z
 
 {-@ reflect tail @-}
-{-@ tail :: {xs:[a] | len xs > 0 } -> {v:[a] | len v == len xs - 1 && lend v == lend xs - 1 } @-}
+{-@ tail :: {xs:[a] | len xs > 0 } -> {v:[a] | len v == len xs - 1 
+                                          && lend v == lend xs - 1 } @-}
 tail :: [a] -> [a]
 tail (_ : zs) = zs
 

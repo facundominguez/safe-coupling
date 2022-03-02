@@ -7,10 +7,10 @@
 module Monad.Distr where 
 
 import Data.Dist 
-import Data.List hiding (all) 
+import Data.List hiding (all, map) 
 
 import Prelude hiding (max, mapM)
-import Numeric.Probability.Distribution hiding (Cons, cons)
+import Numeric.Probability.Distribution hiding (Cons, cons, map)
 
 {-@ type Prob = {v:Double| 0 <= v && v <= 1} @-}
 type Prob = Double
@@ -44,6 +44,12 @@ bernoulli p = fromFreqs [(1, p), (0, 1 - p)]
 unif :: [a] -> Distr a
 unif [a]    = ppure a
 unif (x:xs) = choice (1 `mydiv` fromIntegral (len xs + 1)) (ppure x) (unif xs)
+
+{-@ measure Monad.Distr.expect :: (a -> Double) -> Distr a -> Double @-}
+{-@ assume expect :: f:(a -> Double) -> e:Distr a 
+                  -> {v:Double| v = Monad.Distr.expect f e} @-}
+expect :: (a -> Double) -> Distr a -> Double
+expect f e = sum $ map (\(a, p) -> f a * p) (decons e)
 
 {-@ measure Monad.Distr.lift :: (a -> b -> Bool) -> Distr a -> Distr b -> Bool @-}
 {-@ assume lift :: p1:(a -> b -> Bool) -> x1:Distr a -> x2:Distr b 
