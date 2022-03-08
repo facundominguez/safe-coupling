@@ -19,11 +19,17 @@ import           Monad.Distr.Relational.Theorems (bindDistEq)
 import           Data.Dist 
 import           SGD.SGD 
 
--- TODO: lipschiz
+
+{-@ measure SGD.Theorem.lip :: Double @-}
+{-@ assume lip :: {v:Double|SGD.Theorem.lip = v && v >= 0 } @-}
+lip :: Double
+lip = 10
+
+
 {-@ assume relationalupdatep :: d:Dist Double -> z1:DataPoint -> α1:StepSize -> f1:LossFunction 
                              -> z2:DataPoint -> {α2:StepSize|α1 = α2} -> {f2:LossFunction|f1 = f2} 
                              -> ws1:Weight -> ws2:Weight -> 
-                            {dist d (update z1 α1 f1 ws1) (update z2  α2 f2 ws2) = dist d ws1 ws2 + 2.0 * α1} @-}
+                            {dist d (update z1 α1 f1 ws1) (update z2  α2 f2 ws2) = dist d ws1 ws2 + 2.0 * lip * α1 } @-}
 relationalupdatep :: Dist Double -> DataPoint -> StepSize -> LossFunction -> DataPoint -> StepSize -> LossFunction -> Weight  -> Weight -> ()
 relationalupdatep _ _ _ _ _ _ _ _ _ = ()
 
@@ -43,10 +49,9 @@ sum SSEmp       = 0
 sum (SS a as) = a + sum as
 
 {-@ reflect estab @-}
--- TODO: lipschiz
 {-@ estab :: DataSet -> StepSizes -> {v:Double | 0.0 <= v} @-}
 estab :: DataSet -> StepSizes -> Double
-estab zs as = 2.0 / (lend zs) * sum as
+estab zs as = 2.0 * lip / (lend zs) * sum as
 
 {-@ ple estabEmp @-}
 estabEmp :: DataSet -> () 
@@ -59,12 +64,12 @@ estabEmp zs =
 {-@ ple estabconsR @-}
 {-@ measure Theorem.estabconsR  :: DataSet -> StepSize -> StepSizes -> ()  @-}
 {-@ estabconsR :: zs:{DataSet | lend zs /= 0} -> x:StepSize -> xs:StepSizes 
-                    -> { estab zs (SS x xs) == 2.0 * x * (one / lend zs) + estab zs xs } @-}
+                    -> { estab zs (SS x xs) == 2.0 * lip * x * (one / lend zs) + estab zs xs } @-}
 estabconsR :: DataSet -> StepSize -> StepSizes -> () 
 estabconsR zs x xs 
   =   estab zs (SS x xs)
-  === 2.0 / (lend zs) * sum (SS x xs)
-  === 2.0 * x * (one / lend zs) + estab zs xs 
+  === 2.0 * lip / (lend zs) * sum (SS x xs)
+  === 2.0 * lip * x * (one / lend zs) + estab zs xs 
   *** QED 
 
 {-@ assume choiceBind :: p:Prob -> e1:Distr a -> e2:Distr a -> f:(a -> Distr b) 
@@ -124,32 +129,32 @@ thm d zs1 ws1 as1@(SS α1 a1) f1 zs2 ws2 as2@(SS α2 a2) f2 =
                                     (bind (sgd zs2 ws2 a2 f2) (ppure . update (head zs2) α2 f2 ))) 
         + (1 - (one / lend zs1)) * (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2))
 
-        ?   pureBindDist d d (2 * α1) (update (head zs1) α1 f1) (sgd zs1 ws1 a1 f1) 
+        ?   pureBindDist d d (2 * lip * α1) (update (head zs1) α1 f1) (sgd zs1 ws1 a1 f1) 
                                     (update (head zs2) α2 f2) (sgd zs2 ws2 a2 f2) 
                                     (relationalupdatep d (head zs1) α1 f1 (head zs2) α2 f2) 
         
     =<= (one / lend zs1) * (dist (kant d) (sgd zs1 ws1 a1 f1)  
-                                    (sgd zs2 ws2 a2 f2) + (2.0 * α1)) 
+                                    (sgd zs2 ws2 a2 f2) + (2.0 * lip * α1)) 
         + (1 - (one / lend zs1)) * (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2))
 
          ? thm d zs1 ws1 a1 f1 zs2 ws2 a2 f2
          ? assert (dist (kant d) (sgd zs1 ws1 a1 f1) (sgd zs2 ws2 a2 f2) <= dist d ws1 ws2 + estab zs1 a1)
-    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * α1)) 
+    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * lip * α1)) 
         + (1 - (one / lend zs1)) * (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2))
         ? bindDistEq d (dist d ws1 ws2 + estab zs1 a1) sgdRec1 utail1 sgdRec2 utail2
                      (lemma d zs1 ws1 α1 a1 f1 zs2 ws2 α2 a2 f2)
         ? assert (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2) <= dist d ws1 ws2 + estab zs1 a1)
         ? assert (0 <= (1 - (one / lend zs1)))
-        ? multHelper ((one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * α1))) (1 - (one / lend zs1)) 
+        ? multHelper ((one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * lip * α1))) (1 - (one / lend zs1)) 
                  (dist (kant d) (bind utail1 sgdRec1) (bind utail2 sgdRec2))
                  (dist d ws1 ws2 + estab zs1 a1)
-    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * α1)) 
+    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * lip * α1)) 
         + (1 - (one / lend zs1)) * (dist d ws1 ws2 + estab zs1 a1)
 
-    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * α1)) 
+    =<= (one / lend zs1) * (dist d ws1 ws2 + estab zs1 a1 + (2.0 * lip * α1)) 
             + (1 - (one / lend zs1)) * (dist d ws1 ws2 + estab zs1 a1)
 
-    =<= dist d ws1 ws2 + 2.0 * α1 * (one / lend zs1) + estab zs1 a1
+    =<= dist d ws1 ws2 + 2.0 * lip * α1 * (one / lend zs1) + estab zs1 a1
         ?   estabconsR zs1 α1 a1
                             
     =<= dist d ws1 ws2 + estab zs1 (SS α1 a1)
