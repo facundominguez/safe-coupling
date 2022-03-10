@@ -43,7 +43,7 @@ bernoulli p = fromFreqs [(1, p), (0, 1 - p)]
 {-@ unif :: {xs:[a]|0 < len xs} -> Distr a @-}
 unif :: [a] -> Distr a
 unif [a]    = ppure a
-unif (x:xs) = choice (1 `mydiv` fromIntegral (len xs + 1)) (ppure x) (unif xs)
+unif l@(x:xs) = choice (1 `mydiv` lend l) (ppure x) (unif xs)
 
 {-@ measure Monad.Distr.expect :: (a -> Double) -> Distr a -> Double @-}
 {-@ assume expect :: f:(a -> Double) -> e:Distr a 
@@ -97,3 +97,16 @@ cons n xs x = bind xs (ppure `o` (consDouble x))
 {-@ reflect o @-}
 o :: (b -> c) -> (a -> b) -> a -> c
 o g f x = g (f x)
+
+{-@ reflect lend @-}
+{-@ lend :: xs:[a] -> {v:Double| 0.0 <= v } @-}
+lend :: [a] -> Double
+lend xs = fromIntegral (len xs)
+
+{-@ reflect seqBind @-}
+seqBind :: Distr b -> (a -> b -> Distr c) -> a -> Distr c
+seqBind u f x = bind u (f x)
+
+{-@ reflect flip @-}
+flip :: (a -> b -> c) -> b -> a -> c
+flip f x y = f y x

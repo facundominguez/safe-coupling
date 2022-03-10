@@ -28,10 +28,7 @@ type DataDistr = Distr DataPoint
        -> Distr Weight / [ sslen ss, 0 ] @-}
 sgd :: DataSet -> Weight -> StepSizes -> LossFunction -> Distr Weight
 sgd _  w0 SSEmp    _ = ppure w0
-sgd zs w0 (SS α a) f = bind (unif zs) (sgdRecUpd zs w0 α a f)
- where
-  uhead = ppure (head zs)
-  utail = unif (tail zs)
+sgd zs@(z:zs') w0 (SS α a) f = bind (unif zs) (sgdRecUpd zs w0 α a f)
 
 {-@ reflect sgdRecUpd @-}
 {-@ sgdRecUpd :: zs:{DataSet | 1 < len zs && 1 < lend zs } -> Weight -> StepSize -> ss:StepSizes -> LossFunction 
@@ -44,7 +41,6 @@ sgdRecUpd zs w0 α a f z = bind (sgd zs w0 a f) (pureUpdate z α f)
 pureUpdate :: DataPoint -> StepSize -> LossFunction -> Weight -> Distr Weight 
 pureUpdate zs a f = ppure . update zs a f
 
-
 {-@ measure SGD.SGD.update :: DataPoint -> StepSize -> LossFunction -> Weight -> Weight @-}
 {-@ update :: x1:DataPoint -> x2:StepSize -> x3:LossFunction -> x4:Weight 
            -> {v:Weight | v = SGD.SGD.update x1 x2 x3 x4 } @-}
@@ -55,12 +51,6 @@ update z α f w = w - α * (grad (f z) w)
 -------------------------------------------------------------------------------
 -- | Helper Definitions -------------------------------------------------------
 -------------------------------------------------------------------------------
-
-
-{-@ reflect lend @-}
-{-@ lend :: xs:[a] -> {v:Double| 0.0 <= v } @-}
-lend :: [a] -> Double
-lend xs = fromIntegral (len xs)
 
 {-@ reflect one @-}
 {-@ one :: {v:Double| v = 1.0 } @-}

@@ -39,6 +39,7 @@ library
 
 -- SGD Case Study      
      , SGD.SGD 
+     , SGD.Lemmata.Helper  
      , SGD.Theorem 
 
   build-depends:

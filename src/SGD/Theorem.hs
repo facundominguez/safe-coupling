@@ -72,11 +72,6 @@ estabconsR zs x xs
   === 2.0 * lip * x * (one / lend zs) + estab zs xs 
   *** QED 
 
-{-@ assume choiceBind :: p:Prob -> e1:Distr a -> e2:Distr a -> f:(a -> Distr b) 
-                      -> {choice p (bind e1 f) (bind e2 f) = bind (choice p e1 e2) f} @-}
-choiceBind :: Prob -> Distr a -> Distr a -> (a -> Distr b) -> ()
-choiceBind _ _ _ _ = ()
-
 {-@ ple thm @-}
 {-@ thm :: d:Dist Double -> zs1:DataSet -> ws1:Weight -> α1:StepSizes -> f1:LossFunction -> 
            zs2:{DataSet | lend zs1 == lend zs2 && tail zs1 = tail zs2} -> 
