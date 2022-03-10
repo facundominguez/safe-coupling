@@ -9,6 +9,7 @@ import           Data.List
 
 import           Prelude                 hiding ( flip )
 
+import           Monad.Distr.Laws
 import           Monad.Distr.Predicates
 import           Monad.Distr.Relational.TCB.Spec 
 import           Monad.Distr.Relational.TCB.EDist
