@@ -19,13 +19,10 @@ import           Data.Dist
 import           SGD.SGD 
 
 
-
-
-
 {-@ assume relationalupdatep :: d:Dist Double -> z1:DataPoint -> α1:StepSize -> f1:LossFunction 
                              -> z2:DataPoint -> {α2:StepSize|α1 = α2} -> {f2:LossFunction|f1 = f2} 
                              -> ws1:Weight -> ws2:Weight -> 
-                            {dist d (update z1 α1 f1 ws1) (update z2  α2 f2 ws2) = dist d ws1 ws2 + 2.0 * lip * α1 } @-}
+                            {dist d (update z1 α1 f1 ws1) (update z2 α2 f2 ws2) = dist d ws1 ws2 + 2.0 * lip * α1 } @-}
 relationalupdatep :: Dist Double -> DataPoint -> StepSize -> LossFunction -> DataPoint -> StepSize -> LossFunction -> Weight  -> Weight -> ()
 relationalupdatep _ _ _ _ _ _ _ _ _ = ()
 
