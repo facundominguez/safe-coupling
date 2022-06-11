@@ -26,9 +26,16 @@ binsDist p q n
           plus (bins p (n - 1)) (bernoulli p) 
           plus (bins q (n - 1)) (bernoulli q)
           (binsDist p q (n - 1))
-          (bernoulliDist d p q)
+          (annotate p q n (bernoulliDist d p q))
           plusDist
   where d = distDouble
+
+{-@ annotate
+     :: p:_ -> q:_ -> n: _ -> e:{ dist (kant distDouble) (bernoulli p) (bernoulli q) <= (dist distDouble 1 0) * (q - p) }
+     -> { r:_ | dist (kant distDouble) (bernoulli p) (bernoulli q) <= (q - p) &&  e = r }
+@-}
+annotate :: Prob -> Prob -> Double -> () -> ()
+annotate _ _ _ e = e
 
 {-@ plusDist :: x1:Double -> y1:Double -> x2:Double -> y2:Double 
              -> {distD (plus x1 y1) (plus x2 y2) <= distD x1 x2 + distD y1 y2} @-}

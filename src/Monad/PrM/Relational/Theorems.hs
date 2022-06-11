@@ -47,23 +47,41 @@ makeTwoArg d m f1 f2 lemma x y = lemma x
 -- | mapM Spec ----------------------------------------
 -------------------------------------------------------
 
+{-@ annotate
+      :: m:_
+      -> f1:_
+      -> f2:_
+      -> xs:_
+      -> p:{ lift (bounded m) (mapM f1 xs) (mapM f2 xs) }
+      -> { r:_ | r = p && lift (bounded m) (mapM f1 xs) (mapM f2 xs) }
+@-}
+annotate :: Double -> (a -> PrM Double) -> (a -> PrM Double) -> List a -> () -> ()
+annotate m f1 f2 xs p = p
+
+{-@ proofMapMSpecNil :: xs:{ xs:_ | xs = [] } -> f1:_ -> { mapM f1 xs = ppure nilDouble } @-}
+proofMapMSpecNil :: [a] -> (a -> PrM Double) -> ()
+proofMapMSpecNil _ _ = ()
+
+{-@ proofMapMSpecCons :: x:_ -> xs:_ -> f:_ -> { mapM f (cons x xs) = bind (f x) (consM (len xs) (mapM f xs)) } @-}
+proofMapMSpecCons :: a -> [a] -> (a -> PrM Double) -> ()
+proofMapMSpecCons _ _ _ = ()
+
 {-@ lazy mapMSpec @-}
 {-@ mapMSpec :: {m:Double|0 <= m} 
                    -> f1:(a -> PrM Double) -> f2:(a -> PrM Double) 
                    -> xs:[a]
                    -> (i:a -> {lift (bounded' m) (f1 i) (f2 i)}) 
-                   -> {lift (bounded m) (mapM f1 xs) (mapM f2 xs)} / [len xs, 0] @-}
+                   -> {lift (bounded m) (mapM f1 xs) (mapM f2 xs)} @-}
 mapMSpec :: Double -> (a -> PrM Double) -> (a -> PrM Double) -> List a 
                -> (a -> ()) 
                -> ()
-mapMSpec m f1 f2 is@[] lemma 
-    = pureSpec (bounded m) nilDouble nilDouble (boundedNil m)
-mapMSpec m f1 f2 is'@(i:is) lemma
-    = bindSpec (bounded m) (bounded' m)
+mapMSpec m f1 f2 xs lemma = case xs of
+      [] -> annotate m f1 f2 xs (pureSpec (bounded m) nilDouble nilDouble (boundedNil m) ? proofMapMSpecNil xs f1 ? proofMapMSpecNil xs f2)
+      i:is -> annotate m f1 f2 xs (bindSpec (bounded m) (bounded' m)
             (f1 i) (consM (len is) (mapM f1 is))
             (f2 i) (consM (len is) (mapM f2 is))
             (lemma i)
-            (consBindLemma m f1 f2 is lemma)
+            (consBindLemma m f1 f2 is lemma)  ? proofMapMSpecCons i is f1 ? proofMapMSpecCons i is f2)
 
 {-@ consLemma :: m:Double -> r1:Double -> rs1:List Double -> {r2:Double|bounded' m r1 r2} 
               -> {rs2:List Double|len rs1 = len rs2 && bounded m rs1 rs2} 
