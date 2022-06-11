@@ -92,7 +92,7 @@ distListEq d (x : xs) = distEq d x x ? distListEq d xs
 {-@ ple distListSym @-}
 {-@ distListSym :: d:Dist a -> x:List a -> y:ListEq a {x} -> { distList d x y == distList d y x } @-}
 distListSym :: Dist a -> List a -> List a -> ()
-distListSym d [] _ = () 
+distListSym d [] y = case y of { [] -> (); _ -> () }
 distListSym d _ [] = () 
 distListSym d (x : xs) (y : ys) = symmetry d x y ? distListSym d xs ys
 
