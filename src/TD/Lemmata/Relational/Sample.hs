@@ -1,5 +1,6 @@
 {-@ LIQUID "--reflection"     @-}
 {-@ LIQUID "--ple"            @-}
+{-@ LIQUID "--interpreter"            @-}
 
 module TD.Lemmata.Relational.Sample where 
 
